@@ -102,6 +102,19 @@ export function harnessConfig(skillIds: readonly string[], modelSlug: string, wo
   };
 }
 
+/**
+ * The prompt a lane actually sends. With "force all skills" on, a lane that has skills gets a short
+ * instruction in front of the user's prompt naming every skill in that lane. `opencode run` can't attach
+ * skills itself (`@skill-id` mentions are a TUI feature, and they bypass the `skill` tool, so detection
+ * couldn't see them), so this is an instruction, not a guarantee: a model that ignores it still shows
+ * "not triggered", because detection only reads tool-call events.
+ */
+export function lanePrompt(prompt: string, skillIds: readonly string[], forceSkills: boolean): string {
+  if (!forceSkills || skillIds.length === 0) return prompt;
+  const list = skillIds.map((id) => `\`${id}\``).join(", ");
+  return `Before doing anything else, load each of these skills with the \`skill\` tool, then follow them: ${list}.\n\n${prompt}`;
+}
+
 /** argv for one lane run. The prompt goes after `--` so it can never be read as a flag. */
 export function harnessArgv(modelSlug: string, prompt: string): string[] {
   return ["opencode", "run", "--format", "json", "--auto", "--model", `openrouter/${modelSlug}`, "--", prompt];

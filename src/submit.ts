@@ -24,6 +24,8 @@ export interface SubmitBody {
   prompt: string;
   model: string;
   lanes: { label: string | null; links: string[] }[];
+  /** Tell every lane's model to load all of that lane's skills first. */
+  forceSkills: boolean;
 }
 
 export function parseSubmitBody(raw: unknown): SubmitBody {
@@ -43,7 +45,7 @@ export function parseSubmitBody(raw: unknown): SubmitBody {
     if (new Set(links).size !== links.length) throw new InputError("The same link appears twice in one lane.", { lane: i });
     return { label, links };
   });
-  return { prompt, model, lanes };
+  return { prompt, model, lanes, forceSkills: body.forceSkills === true };
 }
 
 export interface ResolvedSkillInfo {
@@ -103,7 +105,7 @@ export async function submitComparison(env: Env, body: SubmitBody): Promise<stri
     lanes.push({ id: newId(16), label: lane.label, snapshotIds: snaps.map((s) => s.id) });
   }
   const id = newId();
-  await createComparison(env.DB, { id, prompt: body.prompt, model: body.model, harnessVersion: HARNESS_VERSION, rerunOf: null, lanes });
+  await createComparison(env.DB, { id, prompt: body.prompt, model: body.model, harnessVersion: HARNESS_VERSION, rerunOf: null, forceSkills: body.forceSkills, lanes });
   await env.LANES.sendBatch(lanes.map((l) => ({ body: { laneId: l.id } })));
   return id;
 }
@@ -120,6 +122,7 @@ export async function rerunComparison(env: Env, sourceId: string): Promise<strin
     model: view.comparison.model,
     harnessVersion: HARNESS_VERSION,
     rerunOf: sourceId,
+    forceSkills: view.comparison.force_skills === 1,
     lanes,
   });
   await env.LANES.sendBatch(lanes.map((l) => ({ body: { laneId: l.id } })));

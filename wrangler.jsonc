@@ -14,7 +14,9 @@
   "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
   "vars": {
     // Fails closed: unset, or anything except "false", means the password is required.
-    "REQUIRE_PASSWORD": "true",
+    // Off for now: anyone with the URL can submit (spend is capped by the OpenRouter key limit).
+    // Delete still needs a sign-in, which needs APP_PASSWORD_HASH.
+    "REQUIRE_PASSWORD": "false",
     // Submissions are disabled when OpenRouter limit_remaining drops below this (USD).
     "CREDIT_FLOOR_USD": "1",
     // Per-lane wall-clock timeout for `opencode run`.

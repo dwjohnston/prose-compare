@@ -17,6 +17,16 @@
 body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
 .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--card); }
 .brand { font-weight: 600; color: var(--fg); text-decoration: none; }
+.nav { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+.nav a:not(.brand) { font-size: 0.9em; }
+table.list { border-collapse: collapse; background: var(--card); width: 100%; }
+.list th, .list td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+.list thead th { font-size: 0.85em; color: var(--muted); }
+.list .prompt-cell a { color: var(--fg); text-decoration: none; display: block; max-width: 40em; }
+.list .prompt-cell a:hover { color: var(--accent); }
+.list .status-failed { color: var(--danger); }
+.list .status-running, .list .status-queued { color: var(--warn); }
+.nowrap { white-space: nowrap; }
 main { max-width: 1200px; margin: 0 auto; padding: 20px; }
 h1 { font-size: 1.5rem; margin: 0.2em 0 0.4em; }
 h2 { font-size: 1.1rem; margin: 1.6em 0 0.6em; }
@@ -74,3 +84,5 @@ summary { cursor: pointer; font-weight: 600; }
 .trace { padding-left: 1.4em; }
 .trace li { margin: 3px 0; word-break: break-all; }
 .actions { margin: 8px 0; }
+.row.check { flex-wrap: nowrap; gap: 8px; align-items: flex-start; margin: 10px 0; cursor: pointer; max-width: 60em; }
+.check input { margin-top: 4px; }

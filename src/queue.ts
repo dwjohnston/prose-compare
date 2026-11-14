@@ -2,6 +2,7 @@
 // results (SPEC.md "Architecture" and "Run pipeline" step 7).
 import { blobKeys, claimLane, finishLane, getComparison, type LaneResult } from "./db";
 import type { Env, LaneMessage } from "./env";
+import { lanePrompt } from "./config/harness";
 import { estimateCost, modelPricing } from "./openrouter";
 import { analyseLane } from "./runner/events";
 import type { LaneRunResult } from "./runner/sandbox";
@@ -51,7 +52,8 @@ export async function runLane(laneId: string, env: Env): Promise<void> {
     );
     const timeoutMs = Number(env.LANE_TIMEOUT_MS) > 0 ? Number(env.LANE_TIMEOUT_MS) : DEFAULT_TIMEOUT_MS;
     const stub = env.SANDBOX.get(env.SANDBOX.idFromName(laneId));
-    run = await stub.run({ laneId, model: view.comparison.model, prompt: view.comparison.prompt, skills, timeoutMs });
+    const prompt = lanePrompt(view.comparison.prompt, skills.map((s) => s.name), view.comparison.force_skills === 1);
+    run = await stub.run({ laneId, model: view.comparison.model, prompt, skills, timeoutMs });
   } catch (e) {
     await finishLane(env.DB, {
       ...base,

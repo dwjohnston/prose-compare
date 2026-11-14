@@ -19,7 +19,7 @@ export function page(opts: { title: string; script: string; data: unknown }): st
 <script type="module" src="/static/${opts.script}"></script>
 </head>
 <body>
-<header class="top"><a href="/" class="brand">Prose Skill Comparer</a><span id="auth-slot"></span></header>
+<header class="top"><nav class="nav"><a href="/" class="brand">Prose Skill Comparer</a><a href="/">New comparison</a><a href="/results">All results</a></nav><span id="auth-slot"></span></header>
 <main id="app"><noscript>This page needs JavaScript.</noscript></main>
 </body>
 </html>`;

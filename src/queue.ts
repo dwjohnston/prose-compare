@@ -91,7 +91,8 @@ export async function runLane(laneId: string, env: Env): Promise<void> {
   ]);
 
   let error: string | null = null;
-  if (run.timedOut) error = `Timed out after ${Math.round(run.durationMs / 1000)}s`;
+  if (run.cancelled) error = "Cancelled";
+  else if (run.timedOut) error = `Timed out after ${Math.round(run.durationMs / 1000)}s`;
   else if (run.exitCode !== 0) error = analysis.errors.at(-1) ?? `opencode exited with ${run.exitCode}: ${run.stderrTail.slice(-500)}`;
 
   await finishLane(env.DB, {

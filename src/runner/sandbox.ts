@@ -39,7 +39,11 @@ export interface LaneRunResult {
   eventsTruncated: boolean;
   stderrTail: string;
   durationMs: number;
+  /** The run was stopped by cancel(). */
+  cancelled: boolean;
 }
+
+const CANCEL_KEY = "cancelled";
 
 interface SandboxState extends DurableObjectState {
   readonly exports: Cloudflare.Exports & { readonly Outbound: LoopbackForExport<typeof Outbound> };
@@ -49,6 +53,8 @@ export class LaneSandbox extends DurableObject<Env> {
   readonly #container: Container;
   readonly #files: Files;
   readonly #outbound: Fetcher;
+  /** Set while `opencode run` is executing; ends the run early when called. */
+  #onCancel: (() => void) | undefined;
 
   constructor(ctx: SandboxState, env: Env) {
     super(ctx, env);
@@ -59,10 +65,33 @@ export class LaneSandbox extends DurableObject<Env> {
     this.#outbound = ctx.exports.Outbound({});
   }
 
+  /**
+   * Stop this lane. Recorded in storage first, so a cancel that arrives before run() reaches the model
+   * (or between the consumer claiming the lane and calling run()) still takes effect.
+   */
+  async cancel(): Promise<void> {
+    this.ctx.storage.kv.put(CANCEL_KEY, "1");
+    this.#onCancel?.();
+  }
+
+  #isCancelled(): boolean {
+    return this.ctx.storage.kv.get(CANCEL_KEY) !== undefined;
+  }
+
   async run(spec: LaneRunSpec): Promise<LaneRunResult> {
     // Validate before anything starts: a bad snapshot never reaches a container.
     const plan = planMaterialise(spec.skills);
     const started = Date.now();
+    const cancelledEarly = (): LaneRunResult => ({
+      exitCode: null,
+      timedOut: false,
+      events: "",
+      eventsTruncated: false,
+      stderrTail: "",
+      durationMs: Date.now() - started,
+      cancelled: true,
+    });
+    if (this.#isCancelled()) return cancelledEarly();
     try {
       if (this.#container.running) await this.#container.destroy();
       this.#container.start({
@@ -82,6 +111,7 @@ export class LaneSandbox extends DurableObject<Env> {
       const home = `/tmp/home-${crypto.randomUUID()}`;
       await this.#root(["/bin/sh", "-c", 'mkdir -p "$1" && chown -R runner:runner "$1" && chmod -R a+rX "$2"', "prep", home, SKILLS_DIR]);
 
+      if (this.#isCancelled()) return cancelledEarly();
       const config = JSON.stringify(harnessConfig(spec.skills.map((s) => s.name), spec.model));
       const proc = await this.#container.exec(harnessArgv(spec.model, spec.prompt), {
         cwd: WORK_DIR,
@@ -97,10 +127,17 @@ export class LaneSandbox extends DurableObject<Env> {
       const timeout = new Promise<"timeout">((resolve) => {
         timer = setTimeout(() => resolve("timeout"), spec.timeoutMs);
       });
-      const outcome = await Promise.race([proc.exitCode, timeout]);
+      const cancel = new Promise<"cancelled">((resolve) => {
+        this.#onCancel = () => resolve("cancelled");
+      });
+      // A cancel that landed between the last check and installing the handler.
+      if (this.#isCancelled()) this.#onCancel?.();
+      const outcome = await Promise.race([proc.exitCode, timeout, cancel]);
+      this.#onCancel = undefined;
       clearTimeout(timer);
       const timedOut = outcome === "timeout";
-      if (timedOut) {
+      const cancelled = outcome === "cancelled";
+      if (timedOut || cancelled) {
         try {
           proc.kill(9);
         } catch {
@@ -109,14 +146,16 @@ export class LaneSandbox extends DurableObject<Env> {
       }
       const [out, err] = await Promise.all([settle(stdout, 10_000), settle(stderr, 10_000)]);
       return {
-        exitCode: timedOut ? null : (outcome as number),
+        exitCode: timedOut || cancelled ? null : (outcome as number),
         timedOut,
+        cancelled,
         events: out.text,
         eventsTruncated: out.truncated,
         stderrTail: err.text,
         durationMs: Date.now() - started,
       };
     } finally {
+      this.#onCancel = undefined;
       // Tear down: destroy the sandbox whatever happened.
       await this.#container.destroy().catch(() => {});
     }

@@ -3,7 +3,7 @@ import { checkDeleteGate, checkSubmitGate, clearCookie, isSignedIn, login, passw
 import { HARNESS_VERSION } from "./config/harness";
 import { LIMITS } from "./config/limits";
 import { DEFAULT_MODEL, MODELS } from "./config/models";
-import { blobKeys, decodeCursor, deleteComparison, getComparison, listComparisons, reapStaleLanes, spendTotal } from "./db";
+import { blobKeys, cancelComparison, decodeCursor, deleteComparison, getComparison, listComparisons, reapStaleLanes, spendTotal } from "./db";
 import type { Env } from "./env";
 import { LinkError } from "./github/links";
 import { getCredit } from "./openrouter";
@@ -140,6 +140,19 @@ export async function handleRequest(request: Request, env: Env & { ASSETS: Fetch
       if (!credit.ok) return error(402, credit.reason ?? "Submissions are disabled.");
       const body = parseSubmitBody(await readJson(request));
       return json({ id: await submitComparison(env, body) }, 201);
+    }
+
+    m = /^\/api\/comparisons\/([^/]+)\/cancel$/.exec(path);
+    if (method === "POST" && m && ID.test(m[1]!)) {
+      const gate = await checkSubmitGate(request, env);
+      if (!gate.ok) return error(gate.status, gate.reason);
+      const view = await getComparison(env.DB, m[1]!);
+      if (!view || view.comparison.hidden) return error(404, "Comparison not found.");
+      const { skipped, running } = await cancelComparison(env.DB, m[1]!);
+      // Each running lane's sandbox stops its run and tears down; the consumer then records it as cancelled.
+      const results = await Promise.allSettled(running.map((laneId) => env.SANDBOX.get(env.SANDBOX.idFromName(laneId)).cancel()));
+      const signalled = results.filter((r) => r.status === "fulfilled").length;
+      return json({ ok: true, skipped, signalled, failedToSignal: running.length - signalled });
     }
 
     m = /^\/api\/comparisons\/([^/]+)(\/rerun)?$/.exec(path);

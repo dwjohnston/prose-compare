@@ -9,6 +9,9 @@
   // @cloudflare/sandbox's Files resolves native Linux errno names through node:os.
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  // Client scripts and CSS. The Worker runs first for every path and serves these under /static/ with
+  // its own security headers.
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
   "vars": {
     // Fails closed: unset, or anything except "false", means the password is required.
     "REQUIRE_PASSWORD": "true",
@@ -56,7 +59,6 @@
     {
       "class_name": "LaneSandbox",
       "scheduling_policy": "durable_object",
-      "max_instances": 12,
       "images": { "sandbox": { "dockerfile": "./Dockerfile" } }
     }
   ],

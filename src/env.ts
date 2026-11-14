@@ -10,6 +10,7 @@ export interface Env {
   LANES: Queue<LaneMessage>;
   SANDBOX: DurableObjectNamespace<LaneSandbox>;
   LOGIN_LIMITER: RateLimit;
+  ASSETS?: Fetcher;
 
   // vars
   REQUIRE_PASSWORD?: string;

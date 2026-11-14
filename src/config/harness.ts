@@ -63,14 +63,14 @@ export interface PermissionRule {
  * Everything else (shell, edit, glob, grep, websearch, subagent, question, external_directory,
  * execute, MCP) stays denied by the leading rule.
  */
-export function permissionRules(skillIds: readonly string[]): PermissionRule[] {
-  const relative = SKILLS_DIR.slice(WORK_DIR.length + 1); // ".opencode/skills"
+export function permissionRules(skillIds: readonly string[], workDir = WORK_DIR): PermissionRule[] {
+  const skillsDir = `${workDir}/.opencode/skills`;
   return [
     { action: "*", resource: "*", effect: "deny" },
     ...skillIds.map((id): PermissionRule => ({ action: "skill", resource: id, effect: "allow" })),
     { action: "webfetch", resource: "*", effect: "allow" },
-    { action: "read", resource: `${relative}/*`, effect: "allow" },
-    { action: "read", resource: `${SKILLS_DIR}/*`, effect: "allow" },
+    { action: "read", resource: ".opencode/skills/*", effect: "allow" },
+    { action: "read", resource: `${skillsDir}/*`, effect: "allow" },
   ];
 }
 
@@ -85,11 +85,11 @@ export function permissionRules(skillIds: readonly string[]): PermissionRule[] {
  * catalog still resolves with OPENCODE_DISABLE_MODELS_FETCH=1.
  * TODO(golden-capture): confirm against the golden event log that this block is accepted as-is.
  */
-export function harnessConfig(skillIds: readonly string[], modelSlug: string): Record<string, unknown> {
+export function harnessConfig(skillIds: readonly string[], modelSlug: string, workDir = WORK_DIR): Record<string, unknown> {
   return {
     $schema: "https://opencode.ai/config.json",
-    permissions: permissionRules(skillIds),
-    skills: [SKILLS_DIR],
+    permissions: permissionRules(skillIds, workDir),
+    skills: [`${workDir}/.opencode/skills`],
     plugins: [],
     instructions: [],
     snapshots: false,

@@ -53,8 +53,13 @@ export class GithubClient {
       "user-agent": "prose-compare",
     };
     if (this.#token) headers.authorization = `Bearer ${this.#token}`;
-    const res = await this.#fetch(`${this.#api}${path}`, { headers, redirect: "error" });
-    if (res.status === 403 || res.status === 429) throw new SkillError("GitHub API rate limit hit; try again later");
+    // Workers only support "follow" | "manual"; a renamed/transferred repo answers with a redirect, which we
+    // treat as not found rather than follow somewhere else.
+    const res = await this.#fetch(`${this.#api}${path}`, { headers, redirect: "manual" });
+    if (res.status >= 300 && res.status < 400) return { status: 404, body: null };
+    if (res.status === 429 || (res.status === 403 && res.headers.get("x-ratelimit-remaining") === "0"))
+      throw new SkillError("GitHub API rate limit hit; try again later (setting GITHUB_TOKEN raises the limit)");
+    if (res.status === 403 || res.status === 451) throw new SkillError(`GitHub refused access (${res.status})`);
     const body = res.status === 404 ? null : await res.json().catch(() => null);
     return { status: res.status, body };
   }

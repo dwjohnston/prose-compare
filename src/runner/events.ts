@@ -100,10 +100,13 @@ function targetOf(tool: string, input: Json): string {
 /** Map a read path to (skill name, file inside the skill), if it is under the skills folder. */
 export function skillFileOf(path: string): { name: string; file: string } | undefined {
   let p = path.replace(/\\/g, "/");
-  const rel = SKILLS_DIR.slice(WORK_DIR.length + 1);
-  if (p.startsWith(`${SKILLS_DIR}/`)) p = p.slice(SKILLS_DIR.length + 1);
-  else if (p.startsWith(`./${rel}/`)) p = p.slice(rel.length + 3);
+  const rel = SKILLS_DIR.slice(WORK_DIR.length + 1); // ".opencode/skills"
+  // Absolute paths: /work/.opencode/skills/... in the sandbox, <tmp>/work/.opencode/skills/... in a local
+  // capture. Skill folders can't contain ".opencode" (rejected at fetch), so the last match is the root.
+  const abs = p.lastIndexOf(`/${rel}/`);
+  if (p.startsWith(`./${rel}/`)) p = p.slice(rel.length + 3);
   else if (p.startsWith(`${rel}/`)) p = p.slice(rel.length + 1);
+  else if (abs >= 0) p = p.slice(abs + rel.length + 2);
   else if (p.startsWith("skill://")) p = p.slice("skill://".length);
   else return undefined;
   const [name, ...rest] = p.split("/").filter((s) => s !== "");

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      # Includes the hostile test skills suite (test/hostile); CI fails if any of them gets through.
+      - run: bun test
+      - name: Validate wrangler config and build both Workers (no deploy)
+        run: |
+          npx wrangler deploy --dry-run --outdir dist/app
+          npx wrangler deploy --dry-run -c wrangler.render.jsonc --outdir dist/render
+      - name: Migrations apply cleanly
+        run: npx wrangler d1 migrations apply DB --local
+
+  deploy:
+    name: Deploy
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+      - name: Create D1 / R2 / queue if missing, fill in database_id
+        run: bun scripts/ci-provision.ts
+      - run: npx wrangler d1 migrations apply DB --remote
+      - name: Deploy app Worker (builds and pushes the sandbox image)
+        run: npx wrangler deploy
+      - name: Deploy render Worker
+        run: npx wrangler deploy -c wrangler.render.jsonc

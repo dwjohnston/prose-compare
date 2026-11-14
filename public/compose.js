@@ -1,4 +1,4 @@
-import { api, authControl, el, money, pageData, shortSha } from "./common.js";
+import { api, authControl, mount, el, money, pageData, shortSha } from "./common.js";
 
 let config = pageData();
 const app = document.getElementById("app");
@@ -215,7 +215,7 @@ function render() {
   const reason = el("span", { class: "muted small", text: check.ok ? "" : check.reason });
   const hasBaseline = state.lanes.some((l) => l.links.length === 0);
 
-  app.replaceChildren(
+  mount(app, 
     el("h1", { text: "Compare skills on one prompt" }),
     el(
       "p",

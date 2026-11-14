@@ -1,4 +1,4 @@
-import { api, authControl, commitUrl, el, money, pageData, shortSha } from "./common.js";
+import { api, authControl, mount, commitUrl, el, money, pageData, shortSha } from "./common.js";
 
 const page = pageData();
 const app = document.getElementById("app");
@@ -158,7 +158,7 @@ function fillTrace(lane, body) {
       e.status === "error" ? el("span", { class: "small", text: ` — ${e.error}` }) : null,
     ),
   );
-  body.replaceChildren(
+  mount(body,
     items.length ? el("ol", { class: "trace" }, items) : el("p", { class: "muted small", text: "No tool calls." }),
     t.anomalies.length
       ? el("p", { class: "error small", text: `Anomaly: skill calls for names outside this lane: ${t.anomalies.map((a) => a.name).join(", ")}` })
@@ -249,7 +249,7 @@ function render() {
   });
   if (!view) return;
   if (panes[1] >= view.lanes.length) panes[1] = Math.max(0, view.lanes.length - 1);
-  app.replaceChildren(
+  mount(app, 
     header(),
     actions(),
     el("h2", { text: "Summary" }),
@@ -264,13 +264,13 @@ function render() {
 
 async function load() {
   if (page.missing) {
-    app.replaceChildren(el("p", { text: "Comparison not found." }));
+    mount(app, el("p", { text: "Comparison not found." }));
     return;
   }
   try {
     view = await api(`/api/comparisons/${page.id}`);
   } catch (err) {
-    app.replaceChildren(el("p", { class: "error", text: err.message }));
+    mount(app, el("p", { class: "error", text: err.message }));
     return;
   }
   render();

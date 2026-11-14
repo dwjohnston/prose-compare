@@ -9,11 +9,21 @@ export function el(tag, attrs = {}, ...children) {
     else if (k === "dataset") Object.assign(node.dataset, v);
     else node.setAttribute(k, v === true ? "" : String(v));
   }
-  for (const c of children.flat()) {
-    if (c === null || c === undefined || c === false) continue;
-    node.append(c instanceof Node ? c : document.createTextNode(String(c)));
-  }
+  node.append(...nodes(children));
   return node;
+}
+
+/** Flatten any nesting of arrays, drop null/undefined/false, turn the rest into nodes. */
+export function nodes(children) {
+  return children
+    .flat(Infinity)
+    .filter((c) => c !== null && c !== undefined && c !== false)
+    .map((c) => (c instanceof Node ? c : document.createTextNode(String(c))));
+}
+
+/** Replace a node's children with the given (possibly nested) children. */
+export function mount(node, ...children) {
+  node.replaceChildren(...nodes(children));
 }
 
 export function pageData() {

@@ -1,0 +1,76 @@
+:root {
+  --fg: #18181b;
+  --muted: #71717a;
+  --line: #e4e4e7;
+  --bg: #fafafa;
+  --card: #fff;
+  --accent: #1d4ed8;
+  --danger: #b91c1c;
+  --ok: #15803d;
+  --warn: #a16207;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --fg: #e4e4e7; --muted: #a1a1aa; --line: #3f3f46; --bg: #18181b; --card: #202024; --accent: #93c5fd; --danger: #f87171; --ok: #4ade80; --warn: #facc15; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--card); }
+.brand { font-weight: 600; color: var(--fg); text-decoration: none; }
+main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+h1 { font-size: 1.5rem; margin: 0.2em 0 0.4em; }
+h2 { font-size: 1.1rem; margin: 1.6em 0 0.6em; }
+a { color: var(--accent); }
+.lede { color: var(--muted); max-width: 60em; }
+.muted { color: var(--muted); }
+.small { font-size: 0.85em; }
+.mono, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.error { color: var(--danger); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.spread { justify-content: flex-end; }
+.field-label { font-weight: 600; display: block; margin: 12px 0 4px; }
+.row .field-label { margin: 0; }
+textarea, input[type="text"], input[type="url"], input[type="password"], select {
+  font: inherit; color: inherit; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
+}
+textarea { width: 100%; resize: vertical; }
+button { font: inherit; color: inherit; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.danger { color: var(--danger); border-color: var(--danger); }
+button.link { border: none; background: none; color: var(--accent); padding: 2px 4px; }
+button.icon { padding: 2px 8px; }
+.signin { display: flex; gap: 6px; align-items: center; }
+.lane { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+.lane-head { margin-top: 0; }
+.lane-num { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--line); font-size: 0.85em; font-weight: 600; }
+.label-input { flex: 1; min-width: 12em; }
+.link-row { margin: 6px 0 6px 32px; }
+.link-input { flex: 1; min-width: 20em; }
+.skill-info { margin: 4px 0 0 2px; }
+.skill-info .desc { color: var(--muted); max-width: 60em; }
+.note { border-left: 3px solid var(--line); padding: 6px 12px; margin: 16px 0; color: var(--muted); }
+.submit-row { margin-top: 16px; }
+.prompt { white-space: pre-wrap; margin: 0 0 8px; padding: 8px 12px; border-left: 3px solid var(--line); background: var(--card); }
+.lane-skills { padding-left: 1.2em; }
+.table-wrap { overflow-x: auto; }
+table.summary { border-collapse: collapse; background: var(--card); min-width: 100%; }
+.summary th, .summary td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+.summary thead th { font-size: 0.85em; }
+.status.triggered { color: var(--ok); font-weight: 600; }
+.status.load_failed { color: var(--danger); }
+.status.fetched_instead { color: var(--warn); }
+.status.not_triggered, .status.not-in-lane, .status.pending { color: var(--muted); }
+.lane-status.failed { color: var(--danger); }
+.reader { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 800px) { .reader { grid-template-columns: 1fr; } }
+.pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pane-body { background: var(--card); border: 1px solid var(--line); border-radius: 8px; min-height: 300px; }
+.pane-body iframe { width: 100%; height: 70vh; border: 0; border-radius: 8px; }
+.pane-body > p { padding: 0 12px; }
+.plain-output { white-space: pre-wrap; padding: 12px; margin: 0; font-size: 0.9em; }
+details { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; margin: 8px 0; }
+summary { cursor: pointer; font-weight: 600; }
+.trace { padding-left: 1.4em; }
+.trace li { margin: 3px 0; word-break: break-all; }
+.actions { margin: 8px 0; }

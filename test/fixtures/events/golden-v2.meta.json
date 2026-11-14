@@ -1,0 +1,11 @@
+{
+  "harnessVersion": "opencode2 0.0.0-beta-19271",
+  "model": "anthropic/claude-sonnet-5.5",
+  "mode": "native linux-arm64",
+  "capturedAt": "2026-11-14T08:52:07.044Z",
+  "skill": "capture-probe",
+  "owner": "local",
+  "repo": "capture",
+  "path": "capture-probe",
+  "prompt": "Write a four-line poem about a lighthouse. Before writing, load any available skill that applies and follow it, including any reference files it points to."
+}

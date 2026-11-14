@@ -1,0 +1,15 @@
+// Output renderer on its own origin (SPEC.md threat 5). It only reads lane outputs from R2 and serves
+// them as sanitised HTML under a script-free CSP. It holds no secrets and no cookies.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "prose-compare-render",
+  "main": "src/render/worker.ts",
+  "compatibility_date": "2026-09-15",
+  "workers_dev": true,
+  "vars": {
+    // Origin allowed to frame these pages. Empty = derive from the request host ("prose-compare").
+    "APP_ORIGIN": ""
+  },
+  "r2_buckets": [{ "binding": "BLOBS", "bucket_name": "prose-compare-blobs" }],
+  "observability": { "enabled": true }
+}

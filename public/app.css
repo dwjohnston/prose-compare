@@ -84,3 +84,5 @@ summary { cursor: pointer; font-weight: 600; }
 .trace { padding-left: 1.4em; }
 .trace li { margin: 3px 0; word-break: break-all; }
 .actions { margin: 8px 0; }
+.row.check { flex-wrap: nowrap; gap: 8px; align-items: flex-start; margin: 10px 0; cursor: pointer; max-width: 60em; }
+.check input { margin-top: 4px; }

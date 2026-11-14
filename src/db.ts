@@ -15,6 +15,7 @@ export interface ComparisonRow {
   total_cost_usd: number;
   hidden: number;
   rerun_of: string | null;
+  force_skills: number;
 }
 
 export interface LaneRow {
@@ -94,12 +95,12 @@ export interface NewLane {
 
 export async function createComparison(
   db: D1Database,
-  c: { id: string; prompt: string; model: string; harnessVersion: string; rerunOf: string | null; lanes: NewLane[] },
+  c: { id: string; prompt: string; model: string; harnessVersion: string; rerunOf: string | null; forceSkills: boolean; lanes: NewLane[] },
 ): Promise<void> {
   const stmts: D1PreparedStatement[] = [
     db
-      .prepare("INSERT INTO comparison (id, prompt, model, harness_version, status, rerun_of) VALUES (?, ?, ?, ?, 'queued', ?)")
-      .bind(c.id, c.prompt, c.model, c.harnessVersion, c.rerunOf),
+      .prepare("INSERT INTO comparison (id, prompt, model, harness_version, status, rerun_of, force_skills) VALUES (?, ?, ?, ?, 'queued', ?, ?)")
+      .bind(c.id, c.prompt, c.model, c.harnessVersion, c.rerunOf, c.forceSkills ? 1 : 0),
   ];
   c.lanes.forEach((lane, order) => {
     stmts.push(
@@ -274,6 +275,7 @@ export interface ComparisonSummary {
   created_at: string;
   total_cost_usd: number;
   rerun_of: string | null;
+  force_skills: number;
   lane_count: number;
   /** Comma-separated normalised skill names used anywhere in the comparison. */
   skill_names: string | null;
@@ -298,7 +300,7 @@ export async function listComparisons(
   const c = opts.cursor;
   const rows = await db
     .prepare(
-      `SELECT c.id, substr(c.prompt, 1, 280) AS prompt, c.model, c.status, c.created_at, c.total_cost_usd, c.rerun_of,
+      `SELECT c.id, substr(c.prompt, 1, 280) AS prompt, c.model, c.status, c.created_at, c.total_cost_usd, c.rerun_of, c.force_skills,
          (SELECT count(*) FROM lane l WHERE l.comparison_id = c.id) AS lane_count,
          (SELECT group_concat(name, ', ') FROM (
             SELECT DISTINCT s.name FROM lane l JOIN lane_skill ls ON ls.lane_id = l.id

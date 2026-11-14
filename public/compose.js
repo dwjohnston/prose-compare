@@ -11,6 +11,7 @@ const state = {
     { label: "Baseline (no skills)", baseline: true, links: [] },
     { label: "", baseline: false, links: [{ url: "", state: "idle" }] },
   ],
+  forceSkills: false,
   submitting: false,
   error: "",
 };
@@ -168,6 +169,7 @@ async function submit() {
       prompt: state.prompt,
       model: state.model,
       lanes: state.lanes.map((l) => ({ label: l.label, links: l.links.map((k) => k.url.trim()).filter(Boolean) })),
+      forceSkills: state.forceSkills,
     };
     const { id } = await api("/api/comparisons", { method: "POST", body });
     location.href = `/c/${id}`;
@@ -226,6 +228,19 @@ function render() {
     prompt,
     el("div", { class: "row spread" }, counter),
     el("div", { class: "row" }, el("label", { for: "model", class: "field-label", text: "Model" }), model, el("span", { class: "muted small", text: `Harness: ${config.harnessVersion}` })),
+    el(
+      "label",
+      { class: "row check" },
+      el("input", {
+        type: "checkbox",
+        id: "force-skills",
+        checked: state.forceSkills,
+        onchange: (e) => {
+          state.forceSkills = e.target.checked;
+        },
+      }),
+      el("span", {}, el("strong", { text: "Force all skills" }), el("span", { class: "muted small", text: " — tell every lane's model to load all of that lane's skills before answering. Triggering is still read from the event log, so a model that ignores the instruction shows “Not triggered”." })),
+    ),
     el("h2", { text: "Lanes" }),
     state.lanes.map(laneCard),
     el(

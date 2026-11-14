@@ -180,6 +180,7 @@ function header() {
       { class: "muted small" },
       `Model ${c.model} · harness ${c.harness_version} · ${new Date(c.created_at).toLocaleString()} · status ${c.status} · total ${money(c.total_cost_usd)}`,
       c.rerun_of ? el("span", {}, " · re-run of ", el("a", { href: `/c/${c.rerun_of}`, text: c.rerun_of })) : null,
+      c.force_skills ? el("strong", { text: " · skills forced (each lane was told to load all its skills)" }) : null,
     ),
     el(
       "ul",

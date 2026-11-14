@@ -40,7 +40,7 @@ function row(c) {
     ),
     el("td", { class: "small", text: c.model }),
     el("td", { class: "small", text: String(c.lane_count) }),
-    el("td", { class: `small status-${c.status}`, text: c.status + (c.rerun_of ? " · re-run" : "") }),
+    el("td", { class: `small status-${c.status}`, text: c.status + (c.rerun_of ? " · re-run" : "") + (c.force_skills ? " · forced" : "") }),
     el("td", { class: "small nowrap", text: money(c.total_cost_usd) }),
   );
 }

@@ -62,3 +62,21 @@ describe("cost fallback", () => {
     resetPricingCache();
   });
 });
+
+describe("force all skills", () => {
+  test("prefixes an instruction naming the lane's skills only when forced and the lane has skills", async () => {
+    const { lanePrompt } = await import("../src/config/harness");
+    expect(lanePrompt("Write a poem.", ["a", "b"], true)).toBe(
+      "Before doing anything else, load each of these skills with the `skill` tool, then follow them: `a`, `b`.\n\nWrite a poem.",
+    );
+    expect(lanePrompt("Write a poem.", ["a"], false)).toBe("Write a poem.");
+    expect(lanePrompt("Write a poem.", [], true)).toBe("Write a poem.");
+  });
+  test("submit body carries the flag, defaulting to off", async () => {
+    const { parseSubmitBody } = await import("../src/submit");
+    const base = { prompt: "p", model: "anthropic/claude-sonnet-5.5", lanes: [{ label: "", links: [] }] };
+    expect(parseSubmitBody(base).forceSkills).toBe(false);
+    expect(parseSubmitBody({ ...base, forceSkills: true }).forceSkills).toBe(true);
+    expect(parseSubmitBody({ ...base, forceSkills: "yes" }).forceSkills).toBe(false);
+  });
+});

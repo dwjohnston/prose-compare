@@ -83,7 +83,8 @@ export function permissionRules(skillIds: readonly string[], workDir = WORK_DIR)
  *
  * `providers.openrouter.models` declares the chosen model so a model newer than the binary's built-in
  * catalog still resolves with OPENCODE_DISABLE_MODELS_FETCH=1.
- * TODO(golden-capture): confirm against the golden event log that this block is accepted as-is.
+ * Confirmed by the golden capture: the run resolves the model this way, but OpenCode then has no price for
+ * it and reports cost 0 (handled in src/queue.ts).
  */
 export function harnessConfig(skillIds: readonly string[], modelSlug: string, workDir = WORK_DIR): Record<string, unknown> {
   return {

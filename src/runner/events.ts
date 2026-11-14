@@ -11,9 +11,10 @@
 // Skill tool input is `{ id }` in V2 (packages/core/src/tool/plugin/skill.ts) and `{ name }` in V1; both are
 // accepted. Read input is `{ path }` in V2 and `{ filePath }` in V1; webfetch input is `{ url }`.
 //
-// This was written against a PROVISIONAL fixture (test/fixtures/events/provisional-v2.ndjson). Once
-// scripts/capture-events.ts has produced test/fixtures/events/golden-v2.ndjson, the golden test asserts
-// against the real thing; adjust the field lookups below if it disagrees.
+// Written against a provisional fixture, then confirmed by the golden log captured from the pinned
+// OpenCode (test/fixtures/events/golden-v2.ndjson, asserted in test/events.golden.test.ts): skill calls are
+// tool "skill" with input {id}, reads carry an absolute `path`, usage is in step_finish. Note step_finish
+// `cost` is 0 for our config-declared models; src/queue.ts estimates cost from OpenRouter prices instead.
 import { SKILLS_DIR, WORK_DIR } from "../config/harness";
 
 export type InvocationStatus = "triggered" | "load_failed" | "not_triggered" | "fetched_instead";

@@ -48,3 +48,50 @@ export async function getCredit(
 export function resetCreditCache(): void {
   cache = undefined;
 }
+
+// Cost fallback. The golden event log shows OpenCode V2 reports `cost: 0` in step_finish for models declared
+// through our `providers.openrouter.models` config (it has no pricing for them), so lane cost is estimated
+// from OpenRouter's public per-token prices (GET /api/v1/models) when OpenCode reports none.
+export interface Pricing {
+  prompt: number;
+  completion: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+let pricingCache: { at: number; prices: Map<string, Pricing> } | undefined;
+const PRICING_TTL_MS = 6 * 3600_000;
+
+export async function modelPricing(
+  slug: string,
+  fetchImpl: (input: string, init?: RequestInit) => Promise<Response> = (i, init) => fetch(i, init),
+  now = Date.now(),
+): Promise<Pricing | undefined> {
+  if (!pricingCache || now - pricingCache.at > PRICING_TTL_MS) {
+    const res = await fetchImpl("https://openrouter.ai/api/v1/models");
+    if (!res.ok) return pricingCache?.prices.get(slug);
+    const data = ((await res.json()) as { data?: { id: string; pricing?: Record<string, string> }[] }).data ?? [];
+    const prices = new Map<string, Pricing>();
+    for (const m of data) {
+      const p = m.pricing ?? {};
+      const n = (v: string | undefined) => (v !== undefined && Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : undefined);
+      const prompt = n(p.prompt);
+      const completion = n(p.completion);
+      if (prompt === undefined || completion === undefined) continue;
+      prices.set(m.id, { prompt, completion, cacheRead: n(p.input_cache_read) ?? prompt, cacheWrite: n(p.input_cache_write) ?? prompt });
+    }
+    pricingCache = { at: now, prices };
+  }
+  return pricingCache.prices.get(slug);
+}
+
+export function estimateCost(
+  p: Pricing,
+  t: { input: number; output: number; reasoning: number; cacheRead: number; cacheWrite: number },
+): number {
+  return t.input * p.prompt + (t.output + t.reasoning) * p.completion + t.cacheRead * p.cacheRead + t.cacheWrite * p.cacheWrite;
+}
+
+export function resetPricingCache(): void {
+  pricingCache = undefined;
+}

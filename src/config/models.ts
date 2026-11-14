@@ -8,8 +8,6 @@ export interface ModelOption {
 
 export const MODELS: readonly ModelOption[] = [
   { slug: "anthropic/claude-sonnet-5.5", label: "Claude Sonnet 5.5" },
-  { slug: "anthropic/claude-opus-5.5", label: "Claude Opus 5.5" },
-  { slug: "openai/gpt-6.1-sol", label: "GPT-6.1 Sol" },
   { slug: "openai/gpt-6-luna", label: "GPT-6 Luna" },
   { slug: "deepseek/deepseek-v4.1-flash", label: "DeepSeek V4.1 Flash" },
   { slug: "moonshotai/kimi-k3.1-pro", label: "Kimi K3.1 Pro" },

@@ -41,7 +41,7 @@ for (const [label, args] of [
 ] as const) {
   const r = wrangler([...args], { allowFail: true });
   if (r.ok) console.log(`Created ${label}`);
-  else if (/already exists|already owned|exists/i.test(r.out)) console.log(`${label} exists`);
+  else if (/already (exists|taken|owned)|code: (10004|11009)\]/i.test(r.out)) console.log(`${label} exists`);
   else {
     console.error(r.out);
     throw new Error(`Couldn't create ${label}`);

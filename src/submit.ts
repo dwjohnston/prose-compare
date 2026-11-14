@@ -26,6 +26,8 @@ export interface SubmitBody {
   lanes: { label: string | null; links: string[] }[];
   /** Tell every lane's model to load all of that lane's skills first. */
   forceSkills: boolean;
+  /** Comparison this was started from with "Run again", if any. */
+  rerunOf: string | null;
 }
 
 export function parseSubmitBody(raw: unknown): SubmitBody {
@@ -45,7 +47,8 @@ export function parseSubmitBody(raw: unknown): SubmitBody {
     if (new Set(links).size !== links.length) throw new InputError("The same link appears twice in one lane.", { lane: i });
     return { label, links };
   });
-  return { prompt, model, lanes, forceSkills: body.forceSkills === true };
+  const rerunOf = typeof body.rerunOf === "string" && /^[a-z0-9]{8,32}$/.test(body.rerunOf) ? body.rerunOf : null;
+  return { prompt, model, lanes, forceSkills: body.forceSkills === true, rerunOf };
 }
 
 export interface ResolvedSkillInfo {
@@ -105,7 +108,7 @@ export async function submitComparison(env: Env, body: SubmitBody): Promise<stri
     lanes.push({ id: newId(16), label: lane.label, snapshotIds: snaps.map((s) => s.id) });
   }
   const id = newId();
-  await createComparison(env.DB, { id, prompt: body.prompt, model: body.model, harnessVersion: HARNESS_VERSION, rerunOf: null, forceSkills: body.forceSkills, lanes });
+  await createComparison(env.DB, { id, prompt: body.prompt, model: body.model, harnessVersion: HARNESS_VERSION, rerunOf: body.rerunOf, forceSkills: body.forceSkills, lanes });
   await env.LANES.sendBatch(lanes.map((l) => ({ body: { laneId: l.id } })));
   return id;
 }
@@ -114,6 +117,8 @@ export async function submitComparison(env: Env, body: SubmitBody): Promise<stri
 export async function rerunComparison(env: Env, sourceId: string): Promise<string | null> {
   const view = await getComparison(env.DB, sourceId);
   if (!view) return null;
+  // Removed models stay readable in old results but can't be run again.
+  if (!isAllowedModel(view.comparison.model)) throw new InputError("This comparison's model is no longer available, so it can't be run again.");
   const lanes: NewLane[] = view.lanes.map((l) => ({ id: newId(16), label: l.label, snapshotIds: l.skills.map((s) => s.snapshot.id) }));
   const id = newId();
   await createComparison(env.DB, {

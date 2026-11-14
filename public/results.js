@@ -203,26 +203,16 @@ function header() {
 
 function actions() {
   const msg = el("span", { class: "error small", role: "status" });
-  const canRun = !config.passwordRequired || config.signedIn;
   return el(
     "div",
     { class: "row actions" },
-    canRun
-      ? el("button", {
-          type: "button",
-          text: "Run again",
-          title: "Re-run the same pinned skills, prompt and model as a new comparison",
-          onclick: async () => {
-            try {
-              const { id } = await api(`/api/comparisons/${view.comparison.id}/rerun`, { method: "POST", body: {} });
-              location.href = `/c/${id}`;
-            } catch (err) {
-              msg.textContent = err.message;
-            }
-          },
-        })
-      : null,
-    canRun && (view.comparison.status === "queued" || view.comparison.status === "running")
+    el("a", {
+      class: "button",
+      href: `/?from=${encodeURIComponent(view.comparison.id)}`,
+      title: "Open the compose page filled in with this comparison's prompt, model, lanes and pinned skills",
+      text: "Run again",
+    }),
+    (!config.passwordRequired || config.signedIn) && (view.comparison.status === "queued" || view.comparison.status === "running")
       ? el("button", {
           type: "button",
           class: "danger",

@@ -43,8 +43,8 @@ describe("harness lock", () => {
     expect(c.skills).toEqual(["/work/.opencode/skills"]);
     expect("permission" in c).toBe(false); // V1 key
   });
-  test("model allowlist has the spec's seven models with Sonnet 5.5 as default", () => {
-    expect(MODELS.map((m) => m.label)).toEqual(["Claude Sonnet 5.5", "Claude Opus 5.5", "GPT-6.1 Sol", "GPT-6 Luna", "DeepSeek V4.1 Flash", "Kimi K3.1 Pro", "GLM 5.3"]);
+  test("model allowlist has the allowed models with Sonnet 5.5 as default", () => {
+    expect(MODELS.map((m) => m.label)).toEqual(["Claude Sonnet 5.5", "GPT-6 Luna", "DeepSeek V4.1 Flash", "Kimi K3.1 Pro", "GLM 5.3"]);
     expect(DEFAULT_MODEL).toBe("anthropic/claude-sonnet-5.5");
   });
 });
@@ -78,5 +78,16 @@ describe("force all skills", () => {
     expect(parseSubmitBody(base).forceSkills).toBe(false);
     expect(parseSubmitBody({ ...base, forceSkills: true }).forceSkills).toBe(true);
     expect(parseSubmitBody({ ...base, forceSkills: "yes" }).forceSkills).toBe(false);
+  });
+});
+
+describe("removed models", () => {
+  test("Opus 5.5 and GPT-6.1 Sol are no longer accepted", async () => {
+    const { isAllowedModel } = await import("../src/config/models");
+    const { parseSubmitBody } = await import("../src/submit");
+    for (const slug of ["anthropic/claude-opus-5.5", "openai/gpt-6.1-sol"]) {
+      expect(isAllowedModel(slug)).toBe(false);
+      expect(() => parseSubmitBody({ prompt: "p", model: slug, lanes: [{ links: [] }] })).toThrow("Pick a model");
+    }
   });
 });

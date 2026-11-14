@@ -114,6 +114,8 @@ export async function submitComparison(env: Env, body: SubmitBody): Promise<stri
 export async function rerunComparison(env: Env, sourceId: string): Promise<string | null> {
   const view = await getComparison(env.DB, sourceId);
   if (!view) return null;
+  // Removed models stay readable in old results but can't be run again.
+  if (!isAllowedModel(view.comparison.model)) throw new InputError("This comparison's model is no longer available, so it can't be run again.");
   const lanes: NewLane[] = view.lanes.map((l) => ({ id: newId(16), label: l.label, snapshotIds: l.skills.map((s) => s.snapshot.id) }));
   const id = newId();
   await createComparison(env.DB, {

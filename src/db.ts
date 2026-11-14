@@ -255,6 +255,23 @@ export async function reapStaleLanes(db: D1Database, comparisonId: string, maxAg
   if ((res.meta.changes ?? 0) > 0) await db.prepare(COMPARISON_STATUS_SQL).bind(comparisonId).run();
 }
 
+/**
+ * Cancel a comparison: lanes not started yet are marked skipped (the consumer only claims queued lanes),
+ * and the ids of running lanes are returned so their sandboxes can be told to stop.
+ */
+export async function cancelComparison(db: D1Database, id: string): Promise<{ skipped: number; running: string[] }> {
+  const res = await db
+    .prepare(
+      `UPDATE lane SET status = 'skipped', error = 'Cancelled before it started', finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+       WHERE comparison_id = ? AND status = 'queued'`,
+    )
+    .bind(id)
+    .run();
+  const running = await db.prepare("SELECT id FROM lane WHERE comparison_id = ? AND status = 'running'").bind(id).all<{ id: string }>();
+  await db.prepare(COMPARISON_STATUS_SQL).bind(id).run();
+  return { skipped: res.meta.changes ?? 0, running: (running.results ?? []).map((r) => r.id) };
+}
+
 /** Comparison status follows its lanes: running until none are queued/running, then done unless all failed. */
 const COMPARISON_STATUS_SQL = `UPDATE comparison SET status = CASE
     WHEN EXISTS (SELECT 1 FROM lane WHERE comparison_id = ?1 AND status IN ('queued', 'running')) THEN 'running'

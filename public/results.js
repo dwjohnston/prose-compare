@@ -212,6 +212,27 @@ function actions() {
       title: "Open the compose page filled in with this comparison's prompt, model, lanes and pinned skills",
       text: "Run again",
     }),
+    (!config.passwordRequired || config.signedIn) && (view.comparison.status === "queued" || view.comparison.status === "running")
+      ? el("button", {
+          type: "button",
+          class: "danger",
+          text: "Cancel run",
+          title: "Stop lanes that are running and skip lanes that haven't started",
+          onclick: async (e) => {
+            if (!confirm("Cancel this run? Lanes still running are stopped and lanes not started are skipped.")) return;
+            e.target.disabled = true;
+            e.target.textContent = "Cancelling…";
+            try {
+              await api(`/api/comparisons/${view.comparison.id}/cancel`, { method: "POST", body: {} });
+              load();
+            } catch (err) {
+              msg.textContent = err.message;
+              e.target.disabled = false;
+              e.target.textContent = "Cancel run";
+            }
+          },
+        })
+      : null,
     config.signedIn
       ? el("button", {
           type: "button",

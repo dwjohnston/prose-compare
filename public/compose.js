@@ -12,6 +12,9 @@ const state = {
     { label: "", baseline: false, links: [{ url: "", state: "idle" }] },
   ],
   forceSkills: false,
+  /** Set when the page was opened from "Run again". */
+  rerunOf: null,
+  prefillNote: "",
   submitting: false,
   error: "",
 };
@@ -170,6 +173,7 @@ async function submit() {
       model: state.model,
       lanes: state.lanes.map((l) => ({ label: l.label, links: l.links.map((k) => k.url.trim()).filter(Boolean) })),
       forceSkills: state.forceSkills,
+      rerunOf: state.rerunOf,
     };
     const { id } = await api("/api/comparisons", { method: "POST", body });
     location.href = `/c/${id}`;
@@ -224,6 +228,7 @@ function render() {
       { class: "lede" },
       "Each lane loads its own set of SKILL.md files. Every lane gets the same prompt, model and harness. The results show whether each skill actually triggered, read from the harness's tool-call events.",
     ),
+    state.prefillNote ? el("p", { class: "note small", text: state.prefillNote }) : null,
     el("label", { for: "prompt", class: "field-label", text: "Prompt" }),
     prompt,
     el("div", { class: "row spread" }, counter),
@@ -285,4 +290,40 @@ function render() {
   }
 }
 
+/** Pinned link for a stored snapshot: tree/<commit sha>, so a re-run uses exactly the same skill files. */
+function pinnedLink(s) {
+  const path = s.path ? `/${s.path.split("/").map(encodeURIComponent).join("/")}` : "";
+  return `https://github.com/${s.owner}/${s.repo}/tree/${s.commit_sha}${path}`;
+}
+
+/** "Run again": fill the form from an earlier comparison (/?from=<id>). */
+async function prefill(id) {
+  let view;
+  try {
+    view = await api(`/api/comparisons/${encodeURIComponent(id)}`);
+  } catch (err) {
+    state.error = `Couldn't load that comparison: ${err.message}`;
+    render();
+    return;
+  }
+  const c = view.comparison;
+  state.prompt = c.prompt;
+  state.forceSkills = c.force_skills === 1;
+  state.rerunOf = c.id;
+  const allowed = config.models.some((m) => m.slug === c.model);
+  state.model = allowed ? c.model : config.defaultModel;
+  state.lanes = view.lanes.map((lane) => ({
+    label: lane.label || "",
+    baseline: lane.skills.length === 0,
+    links: lane.skills.map((s) => ({ url: pinnedLink(s.snapshot), state: "idle" })),
+  }));
+  state.prefillNote =
+    `Filled in from comparison ${c.id}. Skills are pinned to the commits that run used.` +
+    (allowed ? "" : ` Its model (${c.model}) is no longer available, so the default is selected.`);
+  render();
+  await Promise.all(state.lanes.flatMap((l) => l.links).map((link) => resolve(link)));
+}
+
 render();
+const from = new URLSearchParams(location.search).get("from");
+if (from) prefill(from);

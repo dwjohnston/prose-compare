@@ -265,3 +265,53 @@ export async function spendTotal(db: D1Database): Promise<number> {
   const row = await db.prepare("SELECT COALESCE(SUM(cost_usd), 0) AS total FROM ledger_entry").first<{ total: number }>();
   return row?.total ?? 0;
 }
+
+export interface ComparisonSummary {
+  id: string;
+  prompt: string;
+  model: string;
+  status: ComparisonStatus;
+  created_at: string;
+  total_cost_usd: number;
+  rerun_of: string | null;
+  lane_count: number;
+  /** Comma-separated normalised skill names used anywhere in the comparison. */
+  skill_names: string | null;
+}
+
+/** Cursor for newest-first paging: the last row's created_at and id. */
+export function encodeCursor(row: { created_at: string; id: string }): string {
+  return `${row.created_at}~${row.id}`;
+}
+
+export function decodeCursor(cursor: string | null): { createdAt: string; id: string } | null {
+  if (!cursor) return null;
+  const m = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z)~([a-z0-9]{8,32})$/.exec(cursor);
+  return m ? { createdAt: m[1]!, id: m[2]! } : null;
+}
+
+export async function listComparisons(
+  db: D1Database,
+  opts: { cursor: { createdAt: string; id: string } | null; limit: number },
+): Promise<{ items: ComparisonSummary[]; nextCursor: string | null }> {
+  const limit = Math.min(Math.max(opts.limit, 1), 100);
+  const c = opts.cursor;
+  const rows = await db
+    .prepare(
+      `SELECT c.id, substr(c.prompt, 1, 280) AS prompt, c.model, c.status, c.created_at, c.total_cost_usd, c.rerun_of,
+         (SELECT count(*) FROM lane l WHERE l.comparison_id = c.id) AS lane_count,
+         (SELECT group_concat(name, ', ') FROM (
+            SELECT DISTINCT s.name FROM lane l JOIN lane_skill ls ON ls.lane_id = l.id
+            JOIN skill_snapshot s ON s.id = ls.skill_snapshot_id WHERE l.comparison_id = c.id ORDER BY s.name)) AS skill_names
+       FROM comparison c
+       WHERE c.hidden = 0 AND (?1 IS NULL OR c.created_at < ?1 OR (c.created_at = ?1 AND c.id < ?2))
+       ORDER BY c.created_at DESC, c.id DESC
+       LIMIT ?3`,
+    )
+    .bind(c?.createdAt ?? null, c?.id ?? null, limit + 1)
+    .all<ComparisonSummary>();
+  const items = rows.results ?? [];
+  const more = items.length > limit;
+  if (more) items.pop();
+  return { items, nextCursor: more ? encodeCursor(items[items.length - 1]!) : null };
+}

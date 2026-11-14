@@ -3,7 +3,7 @@ import { checkDeleteGate, checkSubmitGate, clearCookie, isSignedIn, login, passw
 import { HARNESS_VERSION } from "./config/harness";
 import { LIMITS } from "./config/limits";
 import { DEFAULT_MODEL, MODELS } from "./config/models";
-import { blobKeys, deleteComparison, getComparison, reapStaleLanes, spendTotal } from "./db";
+import { blobKeys, decodeCursor, deleteComparison, getComparison, listComparisons, reapStaleLanes, spendTotal } from "./db";
 import type { Env } from "./env";
 import { LinkError } from "./github/links";
 import { getCredit } from "./openrouter";
@@ -111,6 +111,19 @@ export async function handleRequest(request: Request, env: Env & { ASSETS: Fetch
     if (method === "POST" && path === "/api/logout") return json({ ok: true }, 200, { "set-cookie": clearCookie() });
 
     if (method === "GET" && path === "/api/config") return json(await configFor(request, env));
+
+    // All results, newest first. Results are public by link, so the list is public too.
+    if (method === "GET" && path === "/results") {
+      const data = { signedIn: await isSignedIn(request, env), canSignIn: Boolean(env.APP_PASSWORD_HASH) };
+      return html(page({ title: "All results", script: "list.js", data }), appCsp(null));
+    }
+    if (method === "GET" && path === "/api/comparisons") {
+      const raw = url.searchParams.get("cursor");
+      const cursor = decodeCursor(raw);
+      if (raw && !cursor) return error(400, "Bad cursor.");
+      const limit = Number(url.searchParams.get("limit") ?? 25) || 25;
+      return json(await listComparisons(env.DB, { cursor, limit }));
+    }
 
     if (method === "POST" && path === "/api/resolve") {
       const gate = await checkSubmitGate(request, env);

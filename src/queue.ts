@@ -2,6 +2,7 @@
 // results (SPEC.md "Architecture" and "Run pipeline" step 7).
 import { blobKeys, claimLane, finishLane, getComparison, type LaneResult } from "./db";
 import type { Env, LaneMessage } from "./env";
+import { estimateCost, modelPricing } from "./openrouter";
 import { analyseLane } from "./runner/events";
 import type { LaneRunResult } from "./runner/sandbox";
 import { decodeFiles } from "./skills/snapshot";
@@ -66,13 +67,23 @@ export async function runLane(laneId: string, env: Env): Promise<void> {
     run.events,
     laneView.skills.map((s) => ({ name: s.snapshot.name, owner: s.snapshot.owner, repo: s.snapshot.repo, path: s.snapshot.path })),
   );
+  // OpenCode reports cost 0 for our config-declared models (see golden log); estimate from OpenRouter prices.
+  let costUsd = analysis.costUsd;
+  let costEstimated = false;
+  if (costUsd === 0 && analysis.tokens.input + analysis.tokens.output > 0) {
+    const pricing = await modelPricing(view.comparison.model).catch(() => undefined);
+    if (pricing) {
+      costUsd = estimateCost(pricing, analysis.tokens);
+      costEstimated = true;
+    }
+  }
   const keys = blobKeys(laneId);
   await Promise.all([
     env.BLOBS.put(keys.events, run.events, { httpMetadata: { contentType: "application/x-ndjson" } }),
     env.BLOBS.put(keys.output, analysis.output, { httpMetadata: { contentType: "text/markdown; charset=utf-8" } }),
     env.BLOBS.put(
       keys.trace,
-      JSON.stringify({ trace: analysis.trace, anomalies: analysis.anomalies, errors: analysis.errors, steps: analysis.steps, eventsTruncated: run.eventsTruncated }),
+      JSON.stringify({ trace: analysis.trace, anomalies: analysis.anomalies, errors: analysis.errors, steps: analysis.steps, eventsTruncated: run.eventsTruncated, costEstimated }),
       { httpMetadata: { contentType: "application/json" } },
     ),
   ]);
@@ -87,7 +98,7 @@ export async function runLane(laneId: string, env: Env): Promise<void> {
     error,
     tokensInput: analysis.tokens.input,
     tokensOutput: analysis.tokens.output,
-    costUsd: analysis.costUsd,
+    costUsd,
     durationMs: run.durationMs,
     blobs: keys,
     skills: laneView.skills.map((s, i) => {

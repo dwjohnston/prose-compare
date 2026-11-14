@@ -48,3 +48,17 @@ describe("harness lock", () => {
     expect(DEFAULT_MODEL).toBe("anthropic/claude-sonnet-5.5");
   });
 });
+
+describe("cost fallback", () => {
+  test("estimates from OpenRouter per-token prices", async () => {
+    const { modelPricing, estimateCost, resetPricingCache } = await import("../src/openrouter");
+    resetPricingCache();
+    const fake = async () =>
+      new Response(JSON.stringify({ data: [{ id: "anthropic/claude-sonnet-5.5", pricing: { prompt: "0.000002", completion: "0.00001", input_cache_read: "0.0000001" } }] }));
+    const p = (await modelPricing("anthropic/claude-sonnet-5.5", fake))!;
+    // Golden log totals: 3927 in, 136 out
+    expect(estimateCost(p, { input: 3927, output: 136, reasoning: 0, cacheRead: 0, cacheWrite: 0 })).toBeCloseTo(0.009214, 6);
+    expect(await modelPricing("nope/model", fake)).toBeUndefined();
+    resetPricingCache();
+  });
+});
